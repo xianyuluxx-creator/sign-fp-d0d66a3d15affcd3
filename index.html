@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#F2F2F7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" href="data:,">
+<title>指纹与签名确认</title>
+<style>
+:root{--blue:#0A84FF;--bg:#F2F2F7;--card:#fff;--label:#000;--sec:rgba(60,60,67,.6);--sep:rgba(60,60,67,.18);--green:#30D158;--orange:#FF9F0A;--red:#FF453A;
+--ease:cubic-bezier(.32,.72,0,1);--font:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","PingFang SC","Hiragino Sans GB","Helvetica Neue","Microsoft YaHei",sans-serif}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--label);font-family:var(--font);-webkit-font-smoothing:antialiased;overflow:hidden}
+body{display:flex;flex-direction:column;height:100dvh}
+header{padding:calc(env(safe-area-inset-top) + 10px) 20px 6px;flex:none}
+.steps{display:flex;gap:6px;margin-bottom:12px}
+.steps i{flex:1;height:4px;border-radius:2px;background:rgba(60,60,67,.14);overflow:hidden;position:relative}
+.steps i::after{content:"";position:absolute;inset:0;background:var(--blue);transform:scaleX(0);transform-origin:left;transition:transform .45s var(--ease)}
+.steps i.on::after{transform:scaleX(1)}
+.eyebrow{font-size:13px;font-weight:600;color:var(--blue);letter-spacing:.02em}
+h1{font-size:34px;line-height:41px;font-weight:700;letter-spacing:.37px;margin:2px 0 0}
+main{flex:1;position:relative;overflow:hidden}
+section{position:absolute;inset:0;padding:10px 16px 16px;display:flex;flex-direction:column;gap:12px;opacity:0;pointer-events:none;transform:translateX(40px);transition:transform .45s var(--ease),opacity .3s ease;overflow:hidden}
+section.on{opacity:1;pointer-events:auto;transform:none}
+section.left{transform:translateX(-40px)}
+.card{background:var(--card);border-radius:22px;padding:16px}
+.note{font-size:13px;line-height:18px;color:var(--sec);display:flex;gap:8px;align-items:flex-start}
+.note b{color:var(--label);font-weight:600}
+.lock{flex:none;width:18px;height:18px;margin-top:0}
+.field{display:flex;flex-direction:column;padding:10px 0;border-bottom:.5px solid var(--sep)}
+.field:last-child{border-bottom:0}
+.field label{font-size:13px;color:var(--sec);margin-bottom:4px}
+.field input{font:inherit;font-size:17px;border:0;outline:0;padding:4px 0;background:transparent;color:var(--label);width:100%}
+.field input::placeholder{color:rgba(60,60,67,.3)}
+.field.err label{color:var(--red)}
+.consent{display:flex;gap:12px;align-items:flex-start;cursor:pointer}
+.consent input{position:absolute;opacity:0;width:1px;height:1px}
+.box{flex:none;width:26px;height:26px;border-radius:13px;border:2px solid rgba(60,60,67,.3);display:grid;place-items:center;position:relative;margin-top:1px}
+.box::after{content:"";position:absolute;inset:-2px;border-radius:13px;background:var(--blue);opacity:0;transform:scale(.6);transition:opacity .2s,transform .3s var(--ease)}
+.box svg{position:relative;z-index:1;opacity:0;transition:opacity .2s}
+.consent input:checked + .box::after{opacity:1;transform:none}
+.consent input:checked + .box svg{opacity:1}
+.consent input:focus-visible + .box{outline:3px solid rgba(10,132,255,.4);outline-offset:2px}
+.consent p{margin:0;font-size:15px;line-height:21px}
+.consent small{display:block;font-size:12px;color:var(--sec);margin-top:4px;line-height:17px}
+.tips{display:flex;gap:10px}
+.tip{flex:1;background:var(--card);border-radius:18px;padding:12px 10px;text-align:center;font-size:13px;line-height:17px}
+.tip .n{width:26px;height:26px;border-radius:13px;background:rgba(10,132,255,.12);color:var(--blue);font-weight:700;display:grid;place-items:center;margin:0 auto 6px;font-size:14px}
+.btns{display:flex;gap:10px}
+.btn{flex:1;font:inherit;font-size:17px;font-weight:600;border:0;border-radius:14px;height:50px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;position:relative;overflow:hidden;transition:transform .15s var(--ease),opacity .2s}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--blue);color:#fff}
+.btn.tint{background:rgba(10,132,255,.12);color:var(--blue)}
+.btn.gray{background:rgba(120,120,128,.12);color:var(--label)}
+.btn[disabled]{opacity:.35;pointer-events:none}
+.btn.sm{height:36px;font-size:15px;border-radius:10px;flex:none;padding:0 14px}
+.crop{position:relative;width:100%;flex:1;min-height:0;border-radius:22px;background:#1c1c1e;overflow:hidden;touch-action:none;display:grid;place-items:center}
+.crop img{position:absolute;left:50%;top:50%;transform-origin:0 0;will-change:transform;user-select:none;-webkit-user-drag:none;max-width:none}
+.crop .frame{position:relative;aspect-ratio:1;width:min(78%,calc(100% - 40px));max-height:calc(100% - 40px);border-radius:18px;box-shadow:0 0 0 9999px rgba(0,0,0,.5);border:2px solid rgba(255,255,255,.9);pointer-events:none}
+.crop .empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(235,235,245,.6);font-size:15px;gap:10px;text-align:center;padding:20px}
+.crop .frame,.crop img{display:none}
+.crop.has .frame,.crop.has img{display:block}
+.crop.has .empty{display:none}
+.zoom{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--sec)}
+.zoom input{flex:1;accent-color:var(--blue)}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;padding:8px 12px;border-radius:12px;background:rgba(120,120,128,.12);color:var(--sec)}
+.chip.ok{background:rgba(48,209,88,.15);color:#1f8f3d}
+.chip.warn{background:rgba(255,159,10,.16);color:#b26b00}
+.chip.bad{background:rgba(255,69,58,.14);color:#c7281f}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sigwrap{position:relative;flex:1;min-height:0;background:#fff;border-radius:22px;overflow:hidden}
+#sig{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
+.sigline{position:absolute;left:24px;right:24px;bottom:30%;border-bottom:1.5px dashed rgba(60,60,67,.25);pointer-events:none}
+.sighint{position:absolute;left:52px;bottom:calc(30% + 8px);font-size:15px;color:rgba(60,60,67,.3);pointer-events:none;transition:opacity .2s}
+.sigx{position:absolute;left:24px;bottom:calc(30% - 4px);font-size:22px;color:rgba(60,60,67,.3);pointer-events:none}
+.meter{height:4px;border-radius:2px;background:rgba(60,60,67,.12);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--green);transform:scaleX(0);transform-origin:left;transition:transform .2s}
+.sum .kv{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:.5px solid var(--sep);font-size:15px}
+.sum .kv span:first-child{color:var(--sec);flex:none}
+.sum .kv span:last-child{text-align:right;word-break:break-all}
+.media{display:flex;gap:10px}
+.media figure{margin:0;flex:1;background:var(--card);border-radius:22px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
+.media img{width:100%;height:110px;object-fit:contain;border-radius:12px;background:#fafafa}
+.media figcaption{font-size:12px;color:var(--sec)}
+.hash{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:11.5px;line-height:16px;word-break:break-all;color:var(--label);margin-top:4px}
+footer{flex:none;padding:10px 16px calc(env(safe-area-inset-bottom) + 10px);background:rgba(249,249,249,.78);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-top:.5px solid rgba(0,0,0,.12);display:flex;gap:10px}
+footer .btn.back{flex:0 0 96px}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 12px);transform:translate(-50%,-20px);opacity:0;background:rgba(30,30,30,.88);color:#fff;font-size:14px;padding:10px 16px;border-radius:14px;transition:transform .35s var(--ease),opacity .25s;pointer-events:none;z-index:9;max-width:90%;text-align:center}
+.toast.on{transform:translate(-50%,0);opacity:1}
+.hidden{display:none!important}
+@media (max-height:740px){h1{font-size:28px;line-height:34px}.media img{height:80px}.tip{font-size:12px;padding:8px}.sum .kv{padding:6px 0;font-size:14px}}
+@media (prefers-reduced-motion:reduce){*{transition-property:opacity!important;transition-duration:.15s!important}section,section.left{transform:none!important}.btn:active{transform:none}}
+@media (prefers-color-scheme:dark){:root{--bg:#000;--card:#1c1c1e;--label:#fff;--sec:rgba(235,235,245,.6);--sep:rgba(84,84,88,.6)}footer{background:rgba(22,22,24,.78);border-top-color:rgba(255,255,255,.12)}.field input::placeholder{color:rgba(235,235,245,.3)}.media img{background:#fff}.chip.ok{color:#30D158}.chip.warn{color:#FF9F0A}.chip.bad{color:#FF6961}.btn.sm.gray{color:#fff}}
+</style>
+</head>
+<body>
+<header>
+  <div class="steps" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i></div>
+  <div class="eyebrow" id="eyebrow">第 1 步，共 4 步</div>
+  <h1 id="title">信息</h1>
+</header>
+<main>
+  <!-- 1 信息 -->
+  <section id="s1" class="on" aria-label="信息">
+    <div class="card" style="padding:4px 16px">
+      <div class="field" id="f-name"><label for="name">姓名</label><input id="name" autocomplete="name" placeholder="请输入真实姓名" maxlength="40"></div>
+      <div class="field" id="f-phone"><label for="phone">手机号</label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="例如 +966 5x xxx xxxx" maxlength="20"></div>
+      <div class="field"><label for="ref">证件号或合同编号（选填）</label><input id="ref" placeholder="选填" maxlength="40" autocomplete="off"></div>
+    </div>
+    <label class="card consent">
+      <input type="checkbox" id="consent">
+      <span class="box"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M2.5 7.5l3 3 6-7" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <span><p>我同意采集我的<b>指纹照片</b>和<b>手写签名</b>，用于本次签署确认。</p>
+      <small>指纹和签名属于敏感个人信息。您可以随时关闭页面放弃，不勾选无法继续。</small></span>
+    </label>
+    <div class="note"><svg class="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
+      <span><b>所有数据只保存在这台手机上。</b>本页面没有服务器，不会上传或远程存储任何信息；关闭或刷新页面后数据即清除。生成的 PDF 由您自己下载或分享。</span></div>
+  </section>
+
+  <!-- 2 指纹 -->
+  <section id="s2" aria-label="指纹">
+    <div class="tips">
+      <div class="tip"><div class="n">1</div>手指按压印泥</div>
+      <div class="tip"><div class="n">2</div>按在白纸上</div>
+      <div class="tip"><div class="n">3</div>光线充足处拍照</div>
+    </div>
+    <div class="crop" id="crop">
+      <img id="fpImg" alt="指纹照片">
+      <div class="frame"></div>
+      <div class="empty"><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M12 11c0 3-1 6-3 8M8.5 6.5A6 6 0 0118 11c0 2-.3 4-1 6M6 9.5a6 6 0 00-.5 2.5c0 2-.5 3.5-1.5 5M12 15c0 2-.5 4-1.5 5.5M15 13c0 3-.5 5-1.5 7"/></svg>拍一张清晰的指纹照片<br>拍好后可以拖动、缩放，把指纹放进框内</div>
+    </div>
+    <div class="zoom hidden" id="zoomRow"><span>缩放</span><input type="range" id="zoom" min="1" max="4" step="0.01" value="1" aria-label="缩放"><span id="zoomVal">1.0×</span></div>
+    <div class="row"><span class="chip" id="clarity">尚未拍照</span><span class="note" id="dims" style="font-size:12px"></span></div>
+    <div class="btns">
+      <button class="btn tint" id="btnCam"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8a2 2 0 012-2h2l2-2h6l2 2h2a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><circle cx="12" cy="13" r="4"/></svg><span id="camLbl">拍照</span></button>
+      <button class="btn gray" id="btnAlbum">从相册选择</button>
+    </div>
+    <input type="file" id="fileCam" accept="image/*" capture="environment" class="hidden">
+    <input type="file" id="fileAlbum" accept="image/*" class="hidden">
+  </section>
+
+  <!-- 3 签名 -->
+  <section id="s3" aria-label="签名">
+    <div class="note">请在下方白色区域用手指写下您的姓名。写字时页面不会滚动。</div>
+    <div class="sigwrap" id="sigwrap">
+      <div class="sigline"></div><div class="sigx">×</div><div class="sighint" id="sighint">在此签名</div>
+      <canvas id="sig" aria-label="签名区域"></canvas>
+    </div>
+    <div class="meter" aria-hidden="true"><i id="meter"></i></div>
+    <div class="row"><span class="chip" id="sigState">请签名</span>
+      <div style="display:flex;gap:8px"><button class="btn sm gray" id="undo">撤销</button><button class="btn sm gray" id="clear">清除</button></div></div>
+  </section>
+
+  <!-- 4 确认 -->
+  <section id="s4" aria-label="确认">
+    <div class="card sum" style="padding:4px 16px">
+      <div class="kv"><span>姓名</span><span id="vName"></span></div>
+      <div class="kv"><span>手机号</span><span id="vPhone"></span></div>
+      <div class="kv"><span>证件号/合同编号</span><span id="vRef"></span></div>
+      <div class="kv"><span>签署时间（利雅得时间）</span><span id="vTime"></span></div>
+      <div class="kv" style="border:0;display:block"><span>记录 SHA-256 指纹</span><div class="hash" id="vHash">计算中…</div></div>
+    </div>
+    <div class="media">
+      <figure><img id="tFp" alt="指纹"><figcaption>指纹</figcaption></figure>
+      <figure><img id="tSig" alt="签名"><figcaption>签名</figcaption></figure>
+    </div>
+    <div class="note"><svg class="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg><span>文件在本机生成，不会上传。哈希值可用来核对文件内容没有被改动。</span></div>
+    <div class="btns"><button class="btn tint" id="btnDl">下载 PDF</button><button class="btn tint" id="btnShare">分享</button></div>
+  </section>
+</main>
+<footer>
+  <button class="btn gray back" id="back" disabled>返回</button>
+  <button class="btn primary" id="next" disabled>下一步</button>
+</footer>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
+<script>
+(()=>{
+const $=s=>document.querySelector(s);
+const TITLES=['信息','指纹','签名','确认'];
+const state={step:0,fp:null,fpOk:false,sigOk:false,record:null,hash:null,file:null};
+let toastT;
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),2400);}
+
+/* ---------- navigation ---------- */
+function go(n){
+  const secs=[...document.querySelectorAll('main section')];
+  secs.forEach((s,i)=>{s.classList.toggle('on',i===n);s.classList.toggle('left',i<n);});
+  document.querySelectorAll('.steps i').forEach((b,i)=>b.classList.toggle('on',i<=n));
+  $('#eyebrow').textContent=`第 ${n+1} 步，共 4 步`;
+  $('#title').textContent=TITLES[n];
+  state.step=n;
+  $('#back').disabled=n===0;
+  $('#next').textContent=n===3?'完成':'下一步';
+  if(n===2) requestAnimationFrame(sizeSig);
+  if(n===3) buildSummary();
+  validate();
+}
+function validate(){
+  let ok=false;
+  if(state.step===0) ok=info().ok;
+  else if(state.step===1) ok=!!state.fp;
+  else if(state.step===2) ok=state.sigOk;
+  else ok=!!state.hash;
+  $('#next').disabled=!ok;
+}
+$('#back').onclick=()=>state.step>0&&go(state.step-1);
+$('#next').onclick=()=>{
+  if(state.step===1&&!state.fpOk&&!confirm('照片可能不够清晰，仍然使用这张吗？')) return;
+  if(state.step<3) go(state.step+1); else toast('已完成，请下载或分享 PDF 保存');
+};
+
+/* ---------- step 1 ---------- */
+function info(){
+  const name=$('#name').value.trim(),phone=$('#phone').value.trim(),ref=$('#ref').value.trim(),consent=$('#consent').checked;
+  const phoneOk=/^\+?[\d\s\-()]{6,20}$/.test(phone)&&phone.replace(/\D/g,'').length>=6;
+  return {name,phone,ref,consent,phoneOk,ok:name.length>0&&phoneOk&&consent};
+}
+['#name','#phone','#ref','#consent'].forEach(s=>$(s).addEventListener('input',()=>{
+  const i=info();$('#f-phone').classList.toggle('err',i.phone.length>0&&!i.phoneOk);validate();}));
+$('#consent').addEventListener('change',validate);
+
+/* ---------- step 2: fingerprint ---------- */
+const crop=$('#crop'),img=$('#fpImg');
+const v={s:1,base:1,x:0,y:0,w:0,h:0};
+$('#btnCam').onclick=()=>$('#fileCam').click();
+$('#btnAlbum').onclick=()=>$('#fileAlbum').click();
+['#fileCam','#fileAlbum'].forEach(s=>$(s).addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f) loadImage(f);}));
+function loadImage(f){
+  if(!/^image\//.test(f.type)&&f.type){toast('请选择图片文件');return;}
+  const url=URL.createObjectURL(f);
+  const im=new Image();
+  im.onload=()=>{
+    img.src=url;v.w=im.naturalWidth;v.h=im.naturalHeight;
+    crop.classList.add('has');$('#zoomRow').classList.remove('hidden');
+    $('#camLbl').textContent='重拍';
+    fitImage();state.fp=true;validate();
+    $('#dims').textContent=`${v.w}×${v.h}`;
+  };
+  im.onerror=()=>toast('无法读取这张图片，请换一张');
+  im.src=url;
+}
+function frameRect(){const fr=crop.querySelector('.frame').getBoundingClientRect(),cr=crop.getBoundingClientRect();return{size:fr.width,cx:cr.width/2,cy:cr.height/2,cr};}
+function fitImage(){const {size}=frameRect();v.base=size/Math.min(v.w,v.h);v.s=1;v.x=0;v.y=0;$('#zoom').value=1;apply();}
+function clamp(){const {size}=frameRect();const sc=v.base*v.s;const mx=Math.max(0,(v.w*sc-size)/2),my=Math.max(0,(v.h*sc-size)/2);v.x=Math.min(mx,Math.max(-mx,v.x));v.y=Math.min(my,Math.max(-my,v.y));}
+function apply(){clamp();const sc=v.base*v.s;img.style.width=v.w+'px';img.style.height=v.h+'px';
+  img.style.transform=`translate(${v.x-v.w*sc/2}px,${v.y-v.h*sc/2}px) scale(${sc})`;$('#zoomVal').textContent=v.s.toFixed(1)+'×';schedule();}
+let ct;function schedule(){clearTimeout(ct);$('#clarity').className='chip';$('#clarity').textContent='检测清晰度…';ct=setTimeout(analyze,180);}
+$('#zoom').addEventListener('input',e=>{v.s=+e.target.value;apply();});
+const ptrs=new Map();let pinch0=null;
+crop.addEventListener('pointerdown',e=>{if(!state.fp)return;try{crop.setPointerCapture(e.pointerId)}catch(_){}ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch0={d:Math.hypot(a.x-b.x,a.y-b.y),s:v.s};}});
+crop.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId))return;const p=ptrs.get(e.pointerId);
+  if(ptrs.size===1){v.x+=e.clientX-p.x;v.y+=e.clientY-p.y;}
+  p.x=e.clientX;p.y=e.clientY;
+  if(ptrs.size===2&&pinch0){const [a,b]=[...ptrs.values()];v.s=Math.min(4,Math.max(1,pinch0.s*Math.hypot(a.x-b.x,a.y-b.y)/pinch0.d));$('#zoom').value=v.s;}
+  apply();});
+const up=e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch0=null;};
+crop.addEventListener('pointerup',up);crop.addEventListener('pointercancel',up);
+window.addEventListener('resize',()=>{if(state.fp)fitImage();if(state.step===2)sizeSig();});
+function cropCanvas(out){
+  const {size}=frameRect();const sc=v.base*v.s;
+  const sx=v.w/2-v.x/sc-size/sc/2,sy=v.h/2-v.y/sc-size/sc/2,sw=size/sc;
+  const c=document.createElement('canvas');c.width=c.height=out;const g=c.getContext('2d');
+  g.fillStyle='#fff';g.fillRect(0,0,out,out);g.imageSmoothingQuality='high';g.drawImage(img,sx,sy,sw,sw,0,0,out,out);
+  return {c,srcPx:Math.round(sw)};
+}
+function analyze(){
+  if(!state.fp)return;
+  const {c,srcPx}=cropCanvas(512);
+  const N=256;const t=document.createElement('canvas');t.width=t.height=N;const g=t.getContext('2d',{willReadFrequently:true});g.drawImage(c,0,0,N,N);
+  const d=g.getImageData(0,0,N,N).data;const gray=new Float32Array(N*N);
+  for(let i=0;i<N*N;i++)gray[i]=.299*d[i*4]+.587*d[i*4+1]+.114*d[i*4+2];
+  let sum=0,sq=0,n=0,mn=255,mx=0;
+  for(let y=1;y<N-1;y++)for(let x=1;x<N-1;x++){const i=y*N+x;const l=gray[i-1]+gray[i+1]+gray[i-N]+gray[i+N]-4*gray[i];sum+=l;sq+=l*l;n++;if(gray[i]<mn)mn=gray[i];if(gray[i]>mx)mx=gray[i];}
+  const mean=sum/n,variance=sq/n-mean*mean;
+  state.lapVar=Math.round(variance);state.srcPx=srcPx;
+  const el=$('#clarity');let cls,msg;
+  if(srcPx<300){cls='bad';msg='图片太小，请靠近一些重拍';state.fpOk=false;}
+  else if(mx-mn<40){cls='bad';msg='对比度太低，请换亮一点的地方';state.fpOk=false;}
+  else if(variance<60){cls='warn';msg='有点模糊，建议重拍';state.fpOk=false;}
+  else{cls='ok';msg='清晰度良好';state.fpOk=true;}
+  el.className='chip '+cls;el.textContent=msg+`（${state.lapVar}）`;
+  $('#dims').textContent=`${v.w}×${v.h} · 框内 ${srcPx}px`;
+}
+
+/* ---------- step 3: signature ---------- */
+const cv=$('#sig'),cx=cv.getContext('2d');
+const MIN_LEN=180;let strokes=[],cur=null,dpr=1,cw=0,chh=0;
+function sizeSig(){const r=cv.getBoundingClientRect();if(!r.width)return;dpr=Math.min(3,window.devicePixelRatio||1);
+  const ow=cw;cw=r.width;chh=r.height;cv.width=Math.round(cw*dpr);cv.height=Math.round(chh*dpr);
+  if(ow&&ow!==cw){const k=cw/ow;strokes.forEach(s=>s.pts.forEach(p=>{p.x*=k;p.y*=k;}));}
+  redraw();}
+function drawStroke(s){const p=s.pts;cx.strokeStyle='#111';cx.fillStyle='#111';cx.lineCap='round';cx.lineJoin='round';
+  if(p.length===1){cx.beginPath();cx.arc(p[0].x,p[0].y,p[0].w/2,0,Math.PI*2);cx.fill();return;}
+  for(let i=1;i<p.length;i++){const a=p[i-1],b=p[i];const m0=i>1?{x:(p[i-2].x+a.x)/2,y:(p[i-2].y+a.y)/2}:a;const m1={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+    cx.lineWidth=(a.w+b.w)/2;cx.beginPath();cx.moveTo(m0.x,m0.y);cx.quadraticCurveTo(a.x,a.y,m1.x,m1.y);cx.stroke();}
+  const a=p[p.length-1],m={x:(p[p.length-2].x+a.x)/2,y:(p[p.length-2].y+a.y)/2};cx.lineWidth=a.w;cx.beginPath();cx.moveTo(m.x,m.y);cx.lineTo(a.x,a.y);cx.stroke();}
+function redraw(){cx.setTransform(dpr,0,0,dpr,0,0);cx.clearRect(0,0,cw,chh);strokes.forEach(drawStroke);if(cur)drawStroke(cur);sigStatus();}
+function totalLen(){let L=0;strokes.forEach(s=>{for(let i=1;i<s.pts.length;i++)L+=Math.hypot(s.pts[i].x-s.pts[i-1].x,s.pts[i].y-s.pts[i-1].y);});return L;}
+function sigStatus(){const L=totalLen();const k=Math.min(1,L/MIN_LEN);$('#meter').style.transform=`scaleX(${k})`;state.sigOk=L>=MIN_LEN;
+  $('#sighint').style.opacity=strokes.length||cur?0:1;const el=$('#sigState');
+  if(!strokes.length){el.className='chip';el.textContent='请签名';}else if(!state.sigOk){el.className='chip warn';el.textContent='签名太短，请写完整';}else{el.className='chip ok';el.textContent='签名已完成';}
+  $('#undo').disabled=$('#clear').disabled=!strokes.length;validate();}
+function pt(e){const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
+cv.addEventListener("pointerdown",e=>{e.preventDefault();try{cv.setPointerCapture(e.pointerId)}catch(_){}const p=pt(e);const pr=e.pointerType==='pen'&&e.pressure?e.pressure:.5;cur={pts:[{...p,w:1.6+pr*2.6,t:e.timeStamp}]};redraw();});
+cv.addEventListener('pointermove',e=>{if(!cur)return;e.preventDefault();const evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];
+  for(const ev of (evs.length?evs:[e])){const p=pt(ev);const l=cur.pts[cur.pts.length-1];const dist=Math.hypot(p.x-l.x,p.y-l.y);if(dist<1)continue;
+    const dt=Math.max(1,ev.timeStamp-l.t);const vel=dist/dt;let w=ev.pointerType==='pen'&&ev.pressure?1.4+ev.pressure*3.4:Math.max(1.6,Math.min(4.2,4.4-vel*1.4));w=l.w*.7+w*.3;cur.pts.push({...p,w,t:ev.timeStamp});}
+  redraw();});
+const end=e=>{if(!cur)return;strokes.push(cur);cur=null;redraw();};
+cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);cv.addEventListener('lostpointercapture',end);
+['touchstart','touchmove'].forEach(t=>cv.addEventListener(t,e=>e.preventDefault(),{passive:false}));
+$('#undo').onclick=()=>{strokes.pop();redraw();};
+$('#clear').onclick=()=>{strokes=[];redraw();};
+function sigImage(){ // tight-cropped signature on white
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;strokes.forEach(s=>s.pts.forEach(p=>{x0=Math.min(x0,p.x-p.w);y0=Math.min(y0,p.y-p.w);x1=Math.max(x1,p.x+p.w);y1=Math.max(y1,p.y+p.w);}));
+  const pad=16;x0=Math.max(0,x0-pad);y0=Math.max(0,y0-pad);x1=Math.min(cw,x1+pad);y1=Math.min(chh,y1+pad);
+  const c=document.createElement('canvas');c.width=Math.round((x1-x0)*dpr);c.height=Math.round((y1-y0)*dpr);const g=c.getContext('2d');
+  g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(cv,x0*dpr,y0*dpr,c.width,c.height,0,0,c.width,c.height);return c;}
+
+/* ---------- step 4: summary, hash, PDF ---------- */
+function riyadh(d){const f=new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).formatToParts(d);
+  const o={};f.forEach(p=>o[p.type]=p.value);return `${o.year}-${o.month}-${o.day} ${o.hour==='24'?'00':o.hour}:${o.minute}:${o.second} (UTC+3)`;}
+async function sha256(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');}
+async function buildSummary(){
+  const i=info();const now=new Date();
+  const fpUrl=cropCanvas(800).c.toDataURL('image/jpeg',.92);const sigUrl=sigImage().toDataURL('image/png');
+  state.record={name:i.name,phone:i.phone,ref:i.ref||'',consent:true,signedAtISO:now.toISOString(),signedAtRiyadh:riyadh(now),fingerprintImage:fpUrl,signatureImage:sigUrl};
+  state.hash=null;state.file=null;validate();
+  $('#vName').textContent=i.name;$('#vPhone').textContent=i.phone;$('#vRef').textContent=i.ref||'—';$('#vTime').textContent=state.record.signedAtRiyadh;
+  $('#tFp').src=fpUrl;$('#tSig').src=sigUrl;$('#vHash').textContent='计算中…';
+  try{state.hash=await sha256(JSON.stringify(state.record));$('#vHash').textContent=state.hash;}
+  catch(err){$('#vHash').textContent='此浏览器不支持 Web Crypto（需要 HTTPS）';}
+  validate();
+}
+function loadImg(src){return new Promise((r,j)=>{const m=new Image();m.onload=()=>r(m);m.onerror=j;m.src=src;});}
+function wrap(g,text,x,y,maxW,lh){let line='';for(const ch of text){if(g.measureText(line+ch).width>maxW){g.fillText(line,x,y);y+=lh;line=ch;}else line+=ch;}g.fillText(line,x,y);return y+lh;}
+async function renderPage(){ // A4 at 150dpi
+  const W=1240,H=1754,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');const R=state.record;
+  const F='-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC",sans-serif';
+  g.fillStyle='#fff';g.fillRect(0,0,W,H);g.fillStyle='#0A84FF';g.fillRect(0,0,W,14);
+  g.fillStyle='#000';g.font=`700 56px ${F}`;g.fillText('指纹与签名确认书',90,150);
+  g.fillStyle='#666';g.font=`28px ${F}`;g.fillText('本文件在签署人手机上本地生成，未上传至任何服务器。',90,200);
+  let y=290;const rows=[['姓名',R.name],['手机号',R.phone],['证件号/合同编号',R.ref||'—'],['签署时间（利雅得时间）',R.signedAtRiyadh],['同意声明','本人同意采集指纹照片和手写签名，用于本次签署确认。']];
+  g.strokeStyle='#ddd';g.lineWidth=2;
+  for(const [k,val] of rows){g.fillStyle='#777';g.font=`28px ${F}`;g.fillText(k,90,y);g.fillStyle='#000';g.font=`600 34px ${F}`;const ny=wrap(g,val,90,y+50,W-180,46);g.beginPath();g.moveTo(90,ny-10);g.lineTo(W-90,ny-10);g.stroke();y=ny+28;}
+  const fp=await loadImg(R.fingerprintImage),sg=await loadImg(R.signatureImage);
+  const box=480;g.fillStyle='#777';g.font=`28px ${F}`;g.fillText('指纹',90,y);g.fillText('签名',90+box+100,y);y+=20;
+  g.strokeStyle='#ccc';g.strokeRect(90,y,box,box);g.drawImage(fp,90,y,box,box);
+  const sx=90+box+100,sw=W-90-sx;const k=Math.min(sw/sg.width,box/sg.height);g.strokeRect(sx,y,sw,box);g.drawImage(sg,sx+(sw-sg.width*k)/2,y+(box-sg.height*k)/2,sg.width*k,sg.height*k);
+  y+=box+80;g.fillStyle='#777';g.font=`28px ${F}`;g.fillText('记录 SHA-256 哈希（姓名、手机号、编号、时间、指纹图、签名图）',90,y);
+  g.fillStyle='#000';g.font=`26px ui-monospace,Menlo,monospace`;y=wrap(g,state.hash||'',90,y+46,W-180,36);
+  g.fillStyle='#999';g.font=`24px ${F}`;g.fillText('哈希值在签署时由本机根据以上信息、指纹图和签名图计算，可用于核对记录是否被改动。',90,H-70);
+  return c;
+}
+async function makeFile(){
+  if(state.file)return state.file;
+  const page=await renderPage();const stamp=state.record.signedAtISO.slice(0,10);const base=`签署确认-${state.record.name}-${stamp}`;
+  if(window.jspdf&&window.jspdf.jsPDF){
+    const doc=new window.jspdf.jsPDF({unit:'mm',format:'a4',compress:true});
+    doc.addImage(page.toDataURL('image/jpeg',.9),'JPEG',0,0,210,297);
+    doc.setProperties({title:'指纹与签名确认书',subject:'SHA-256 '+state.hash,keywords:state.hash});
+    const blob=doc.output('blob');state.file=new File([blob],base+'.pdf',{type:'application/pdf'});
+  }else{
+    const blob=await new Promise(r=>page.toBlob(r,'image/png'));state.file=new File([blob],base+'.png',{type:'image/png'});toast('PDF 组件未加载，已改为生成 PNG 图片');
+  }
+  return state.file;
+}
+function download(f){const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);}
+$('#btnDl').onclick=async()=>{try{const f=await makeFile();download(f);toast('已生成 '+f.name);}catch(e){console.error(e);toast('生成失败：'+e.message);}};
+$('#btnShare').onclick=async()=>{try{const f=await makeFile();
+  if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'指纹与签名确认书'});}
+  else{download(f);toast('此浏览器不支持分享文件，已改为下载');}}catch(e){if(e.name!=='AbortError'){console.error(e);toast('分享失败：'+e.message);}}};
+window.__signfp={state,makeFile};
+go(0);
+})();
+</script>
+</body>
+</html>
